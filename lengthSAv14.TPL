@@ -1,4 +1,4 @@
-//We need to translate this code to TMB. 
+//We need to translate this code to TMB..
 //version 1.4 is denoted as v14; 
 //Revision
 //(1) in implementing random walk for fishing mortality
