@@ -9,7 +9,7 @@
 //Author: Saang-Yoon Hyun, Kyuhan Kim, Jinwoo Gim, Minkyu Bahk and Doyul Kim as of 6 May, 20202 
 
 DATA_SECTION
-  init_int nages; 		// 6
+  init_int nages; 		// 6;
   init_int nlengths;  	// 42 classes
   init_int nyrs; 		// 23 years
 
