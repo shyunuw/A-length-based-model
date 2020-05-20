@@ -56,9 +56,11 @@ DATA_SECTION
   
   vector Wt(1,nlengths);
   
-  init_number powerML;  //power (=beta*b1) in M = par*L^power
+  //init_number powerML;  //power (=beta*b1) in M = par*L^power
                         //ad hoc value = 3.425 * 0.305, where 3.425 from JW, and 0.305 from Lorenzen (1996);
-                         
+  init_vector M(1,nlengths);
+                        
+                                               
   init_number lambda1; // lambda in the objective function
   init_number lambda2; // lambda in the objective function
   init_number lambda3; // lambda in the objective function
@@ -114,7 +116,7 @@ DATA_SECTION
   !!cout<<"low_F_devs, up_F_devs: "<<low_F_devs<<" "<<up_F_devs<<endl;
 
 PARAMETER_SECTION
-  init_number logF1(1);                        //log(F in the first time, i.e., first year);
+  init_bounded_number logF1(-5.0,2.0,1);                        //log(F in the first time, i.e., first year);
   !!if(choice_F_method == 1)
        init_bounded_vector F_devs_1(1,nyrs-1,low_F_devs,up_F_devs,1);         //random walk deviations for annual fishing mortality in years after 1st year; 
   !!if(choice_F_method == 2)
@@ -124,20 +126,20 @@ PARAMETER_SECTION
   init_number logL50(4);     //selectivity 
   init_bounded_number gamma(0.05,1.5,4);     //selectivity
   init_bounded_number sigmaL(0.0,3.0,5);     //the uncertainty in the L_{a+1} equation
-  init_number log_parML(5);     //the parameter in M = par * L^(3.425*0.305);
+  //init_number log_parML(5);     //the parameter in M = par * L^(3.425*0.305);
   
   //Under B-H, Recruits_{t+1} = Spawners_t/(a+b*Spawners_t); 
   //Under Ricker, Recruits_{t+1} = a*Spawners_t*exp(-b*Spawners_t); 
   init_bounded_number logaSR(0.0,30.0,2);    //parameter a in the stock-recruitment model 
   init_bounded_number logbSR(-30.0,0.0,2);     //parameter b in the stock-recruitment model 
-  init_bounded_number logit_q(-30.0,30.0,5);                               
+  init_number logit_q(5);                               
   
   vector M(1,nlengths);  
   number F_mean;
   vector F_t(1,nyrs);      //instantaneous fishing mortality by year 
                           //previous notation: F_yr(1,nyrs); 
   vector logFt(1,nyrs);   //log(Ft);
-  number parML;
+  //number parML;
   
   number q;
   //vector temelems(indexMinyrLD,nyrs); 
@@ -161,7 +163,7 @@ PARAMETER_SECTION
  
   matrix F_tx(1,nyrs,1,nlengths);  //F_{year,xind}; 
   matrix Z(1,nyrs,1,nlengths);
-  matrix ExpZ(1,nyrs,1,nlengths);  //Exp(-Z); 
+  matrix ExpZ(1,nyrs+1,1,nlengths);  //Exp(-Z); 
   
   3darray NL(1,nages,1,ncohorts+1,1,nlengths); 
   matrix N(1,nages,1,nyrs+1);  //the same index as VB         
@@ -220,7 +222,7 @@ PRELIMINARY_CALCS_SECTION
 PROCEDURE_SECTION  
   kappa=mfexp(logkappa); 
   L50=mfexp(logL50);
-  parML=mfexp(log_parML);   
+  //parML=mfexp(log_parML);   
   aSR=mfexp(logaSR); 
   bSR=mfexp(logbSR);   
   
@@ -229,8 +231,8 @@ PROCEDURE_SECTION
       SpawnersA(a)=1.0;
   
   //instantaneous natural mortality by length class
-  for(int xind=1; xind<=nlengths; xind++) 
-      M(xind)=parML*(pow(x(xind),-1.0*powerML)); 
+  //for(int xind=1; xind<=nlengths; xind++) 
+  //    M(xind)=parML*(pow(x(xind),-1.0*powerML)); 
   
   //instantaneous fishing mortality by time, i.e., year;
   if(choice_F_method == 1) {
@@ -315,7 +317,7 @@ PROCEDURE_SECTION
            NL(a,m,xind)=Recruits(m)*f(a,xind);   //<***************************************
            N(a,m)=N(a,m)+NL(a,m,xind);   
         
-           SpawnersL(a,m,xind)=NL(a,m,xind)*maturation(xind)*SpawnersA(a); 
+           SpawnersL(a,m,xind)=NL(a,m,xind)*ExpZ(m,xind)*maturation(xind)*SpawnersA(a); 
            Spawners(a,m)=Spawners(a,m)+SpawnersL(a,m,xind); 
         };
      }
@@ -328,7 +330,7 @@ PROCEDURE_SECTION
 	    for(int xind=1;xind<=nlengths;xind++)  {
 	       NL(a,m,xind) = N(a,m)*f(a,xind);
 	    
-     	   SpawnersL(a,m,xind)=NL(a,m,xind)*maturation(xind)*SpawnersA(a); 
+     	   SpawnersL(a,m,xind)=NL(a,m,xind)*ExpZ(m,xind)*maturation(xind)*SpawnersA(a); 
            Spawners(a,m)=Spawners(a,m)+SpawnersL(a,m,xind);   
         }; 
      };    
@@ -356,7 +358,7 @@ PROCEDURE_SECTION
                               //cf. NL(a,m,Lind)=N(m-1,a-1)*f(a-1,Lind);
                    N(a,m)=N(a,m)+NL(a,m,Lind);
                    
-                   SpawnersL(a,m,Lind)=NL(a,m,Lind)*maturation(Lind)*SpawnersA(a); 
+                   SpawnersL(a,m,Lind)=NL(a,m,Lind)*ExpZ(m,Lind)*maturation(Lind)*SpawnersA(a); 
                    Spawners(a,m)=Spawners(a,m)+SpawnersL(a,m,Lind); 
               };
            }
@@ -374,7 +376,7 @@ PROCEDURE_SECTION
                               //NL(a,m,Lind)=N(a-1,m-1)*f(a-1,Lind)+N(a,m-1)*f(a,Lind); 
                    N(a,m)=N(a,m)+NL(a,m,Lind);
                     
-                   SpawnersL(a,m,Lind)=NL(a,m,Lind)*maturation(Lind)*SpawnersA(a); 
+                   SpawnersL(a,m,Lind)=NL(a,m,Lind)*ExpZ(m,Lind)*maturation(Lind)*SpawnersA(a); 
                    Spawners(a,m)=Spawners(a,m)+SpawnersL(a,m,Lind); 
                };     
                f(a)=NL(a,m)/N(a,m);  //normalize; f(6) is a vector    
